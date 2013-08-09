@@ -20,10 +20,13 @@ add the path to DJCPP to the [dosbox.conf](http://www.dosbox.com/wiki/Dosbox.con
 
 3. 
 
-## Run
+## Compile
+    cd SRC
+    `gpp -o main.exe main.cpp`
 
+## Run
+    main.exe
 
 
 ## Usage
-
-
+    Refer to the [usage](doc/usage.md) doc file.

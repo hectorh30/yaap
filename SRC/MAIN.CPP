@@ -12,7 +12,7 @@ int main (int argc, char *argv[])
 {
     Manager manager;
     manager.launch();
-    
+
     return 0;
 }
 
