@@ -29,4 +29,4 @@ add the path to DJCPP to the [dosbox.conf](http://www.dosbox.com/wiki/Dosbox.con
 
 
 ## Usage
-    Refer to the [usage](doc/usage.md) doc file.
+    Refer to the `doc/usage.md` doc file.
