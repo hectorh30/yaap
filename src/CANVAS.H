@@ -27,6 +27,13 @@ class Canvas {
         int current_color;
         int background_color;
 
+        // Selection data
+        bool area_selected;
+        int selection_x_0;
+        int selection_x_1;
+        int selection_y_0;
+        int selection_y_1;
+
         // TODO: make this constants
         int CANVAS_HEIGHT;
         int CANVAS_WIDTH;
@@ -65,7 +72,9 @@ class Canvas {
         void drawRectangle(int x_0, int y_0, int x_1, int y_1);
         void drawRectangle(int x_0, int y_0, int x_1, int y_1, int color);
         void drawNegativeRectangle(int x_0, int y_0, int x_1, int y_1);
-        void drawSelectionRectangle(int x_0, int y_0, int x_1, int y_1);
+
+        void setSelectionRectangle(int x_0, int y_0, int x_1, int y_1);
+        void removeSelectionRectangle();
 
         void drawCircle(int cx, int cy, int radius);
         void drawCircle(int cx, int cy, int radius, int color);
@@ -96,7 +105,7 @@ Canvas::Canvas() {
     CANVAS_HEIGHT = 500;
     CANVAS_WIDTH = 800;
 
-    
+
 
 }
 
@@ -747,13 +756,25 @@ void Canvas::drawRectangle(int x_0, int y_0, int x_1, int y_1, int color) {
     drawLine(x_1,y_0,x_1,y_1,color);
 }
 
-void Canvas::drawSelectionRectangle(int x_0, int y_0, int x_1, int y_1) {
-    drawNegativeLine(x_0,y_0,x_1,y_0);
-    drawNegativeLine(x_0,y_1,x_1,y_1);
-    drawNegativeLine(x_0,y_0,x_0,y_1);
-    drawNegativeLine(x_1,y_0,x_1,y_1);
+void Canvas::setSelectionRectangle(int x_0, int y_0, int x_1, int y_1) {
+    area_selected = true;
+    selection_x_0 = x_0;
+    selection_x_1 = x_1;
+    selection_y_0 = y_0;
+    selection_y_1 = y_1;
+}
 
+void Canvas::removeSelectionRectangle()
+{
+    if (area_selected) {
+        drawNegativeLine(selection_x_0, selection_y_0, selection_x_1, selection_y_0);
+        drawNegativeLine(selection_x_0, selection_y_1, selection_x_1, selection_y_1);
+        drawNegativeLine(selection_x_0, selection_y_0, selection_x_0, selection_y_1);
+        drawNegativeLine(selection_x_1, selection_y_0, selection_x_1, selection_y_1);
 
+        area_selected = false;
+        setSelectionRectangle(-1, -1, -1, -1);
+    }
 }
 
 void Canvas::drawNegativeRectangle(int x_0, int y_0, int x_1, int y_1) {

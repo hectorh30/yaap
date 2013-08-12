@@ -66,11 +66,13 @@ class Manager {
         // Methods
         void initialize();
         void updateCommandText(int cmd);
-        void executeAction(int cmd);
+        void executeCMD(int cmd);
         bool isVertexSet();
         void setVertex(int x, int y);
         void unsetVertex();
         void resetFirstMovement();
+        void preCMDChange(int current_cmd, int new_cmd);
+
         //~ bool isPolygonStarted();
         void resetPolygonInitialPoint();
         void setPolygonInitialPoint(int x, int y);
@@ -142,8 +144,7 @@ void Manager::launch() {
         new_cmd = getCMD();
 
         if (current_cmd != new_cmd) {
-            // Update command text
-            updateCommandText(new_cmd);
+            preCMDChange(current_cmd, new_cmd);
             current_cmd = new_cmd;
         }
 
@@ -152,10 +153,10 @@ void Manager::launch() {
 
         // Rendering
         if (mouse->isInsideCanvas()) {
-            executeAction(current_cmd);
+            executeCMD(current_cmd);
         } else {
             if (current_cmd == CMD_PICK_COLOR) {
-                executeAction(current_cmd);
+                executeCMD(current_cmd);
             }
         }
 
@@ -168,9 +169,12 @@ void Manager::launch() {
     unsetSVGA();
 }
 
-void Manager::executeAction(int cmd) {
+void Manager::executeCMD(int cmd) {
 
     switch(cmd) {
+        case CMD_NONE:
+            break;
+
         case CMD_SELECT:
             // If left click is hold
             if (mouse->getLeftHold()) {
@@ -192,8 +196,9 @@ void Manager::executeAction(int cmd) {
                 }
             } else {
                 if (isVertexSet()) {
+
                     // Last temp rectangle is the selection rectangle
-                    canvas->drawNegativeRectangle(vertex_x, vertex_y, mouse->getOldX()-1, mouse->getOldY()-1);
+                    canvas->setSelectionRectangle(vertex_x, vertex_y, mouse->getOldX() - 1, mouse->getOldY() - 1);
 
                     // Reset stuff as action is finished
                     unsetVertex();
@@ -202,14 +207,12 @@ void Manager::executeAction(int cmd) {
             }
             break;
 
-        case CMD_NONE:
-            break;
-
         case CMD_COPY:
-
+            canvas->copySelectionRectangle();
             break;
 
         case CMD_CUT:
+            canvas->cutSelectionRectangle();
             break;
 
         case CMD_PASTE:
@@ -872,7 +875,7 @@ int Manager::getCMD() {
                     case 'W':
                         returnValue = CMD_PICK_COLOR;
                         break;
-                    case 'W':
+                    case 'Z':
                         returnValue = CMD_SELECT;
                         break;
                     default:
@@ -1084,6 +1087,12 @@ void Manager::updateCommandText(int cmd) {
         case CMD_CUT:
             canvas->setCommandText("Cut");
             break;
+        case CMD_COPY:
+            canvas->setCommandText("Copy");
+            break;
+        case CMD_PASTE:
+            canvas->setCommandText("Paste");
+            break;
         case CMD_SELECT:
             canvas->setCommandText("Select");
             break;
@@ -1150,6 +1159,17 @@ void Manager::setTextWritingMode(int init_x, int init_y) {
             }
         }
     }
+}
+
+void Manager::preCMDChange(int current_cmd, int new_cmd) {
+    if (current_cmd == CMD_SELECT) {
+        if (new_cmd != CMD_COPY && new_cmd != CMD_PASTE) {
+            canvas->removeSelectionRectangle();
+        }
+    }
+
+    // Update command texts
+    updateCommandText(new_cmd);
 }
 
 #endif
