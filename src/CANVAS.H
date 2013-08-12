@@ -38,6 +38,9 @@ class Canvas {
         int selection_y_1;
         std::vector<std::vector<int> > selectionRectangle;
 
+        int widthPalette_x;
+        int widthPalette_y;
+
         // TODO: make this constants
         int CANVAS_HEIGHT;
         int CANVAS_WIDTH;
@@ -59,6 +62,10 @@ class Canvas {
         void drawWidthPalette(int x, int y);
         void drawCurrentColor(int x, int y);
         void setCurrentColor(int color);
+        
+        void setCurrentWidth(int width);
+        int getPickedWidth(int x, int y);
+
         int getCurrentColor();
         void showHelp();
 
@@ -71,6 +78,7 @@ class Canvas {
         void putWidthPixel(int x, int y, int color, int width);
         void drawNegativeLine(int x_0, int y_0, int x_1, int y_1);
 
+        void drawLine(int x_0, int y_0, int x_1, int y_1, int color, int width);
         void drawLine(int x_0, int y_0, int x_1, int y_1, int color);
         void drawLine(int x_0, int y_0, int x_1, int y_1);
         void drawWidthLine(int x_0, int y_0, int x_1, int y_1, int width);
@@ -119,6 +127,9 @@ Canvas::Canvas() {
     selection_y_0 = -1;
     selection_y_1 = -1;
 
+    widthPalette_x = 0;
+    widthPalette_y = 0;
+
     CANVAS_HEIGHT = 500;
     CANVAS_WIDTH = 800;
 }
@@ -152,10 +163,33 @@ void Canvas::putWidthPixel(int x, int y, int color, int width)
 
 void Canvas::drawWidthPalette(int x, int y) {
 
+    /**
+     * Default 560, 510
+     */
+
+    widthPalette_x  = x;
+    widthPalette_y = y;
+
     drawWidthLine(x, y, x, y+15, 10, 1);
     drawWidthLine(x + 20, y + 2, x + 20, y + 13, 10, 4);
     drawWidthLine(x + 40, y + 4, x + 40, y + 11, 10, 8);
 
+}
+
+int Canvas::getPickedWidth(int x, int y) {
+    int returnValue = 0;
+
+    // if is inside width box
+    if (x >= widthPalette_x && y >= widthPalette_y && y <= widthPalette_y + 15) {
+        if (x == widthPalette_x) {
+            returnValue = 1;
+        } else if (x >= widthPalette_x + 18 && x <= widthPalette_x + 22) {
+            returnValue = 4;
+        } else if (x >= widthPalette_x + 36 && x <= widthPalette_x + 44) {
+            returnValue = 8;
+        }
+    }
+    return returnValue;
 }
 
 void Canvas::putPixel(int x, int y) {
@@ -216,7 +250,14 @@ void Canvas::setBank(unsigned long absoluteOffset) {
 }
 
 void Canvas::drawLine(int x_0, int y_0, int x_1, int y_1) {
-    drawLine(x_0,y_0,x_1,y_1,current_color);
+    drawLine(x_0,y_0,x_1,y_1,current_color, current_width);
+}
+
+void Canvas::drawLine(int x_0, int y_0, int x_1, int y_1, int color, int width) {
+    if (width == 1)
+        drawLine(x_0,y_0,x_1,y_1,current_color);
+    else
+        drawWidthLine(x_0,y_0,x_1,y_1,current_color, width);
 }
 
 void Canvas::drawLine(int x_0, int y_0, int x_1, int y_1, int color) {
@@ -743,8 +784,7 @@ void Canvas::drawCircle(int cx, int cy, int radius) {
     drawCircle(cx,cy,radius,current_color);
 }
 
-void Canvas::drawCircle(int cx, int cy, int radius, int color)
-{
+void Canvas::drawCircle(int cx, int cy, int radius, int color) {
     int x = -radius, y = 0, err = 2-2*radius; /* II. Quadrant */ 
     do {
         putPixel(cx-x, cy+y, color); /*   I. Quadrant */
@@ -794,8 +834,7 @@ void Canvas::setSelectionRectangle(int x_0, int y_0, int x_1, int y_1) {
     selection_y_1 = y_1;
 }
 
-void Canvas::removeSelectionRectangle()
-{
+void Canvas::removeSelectionRectangle() {
     if (selection_rectangle_visible) {
         drawNegativeLine(selection_x_0, selection_y_0, selection_x_1, selection_y_0);
         drawNegativeLine(selection_x_0, selection_y_1, selection_x_1, selection_y_1);
@@ -812,8 +851,7 @@ void Canvas::drawNegativeRectangle(int x_0, int y_0, int x_1, int y_1) {
     drawNegativeLine(x_1,y_0,x_1,y_1);
 }
 
-void Canvas::drawEllipse(int x0, int y0, int x1, int y1)
-{
+void Canvas::drawEllipse(int x0, int y0, int x1, int y1) {
     /*
      * source: http://free.pages.at/easyfilter/bresenham.html
      */
@@ -845,8 +883,7 @@ void Canvas::drawEllipse(int x0, int y0, int x1, int y1)
    }
 }
 
-void Canvas::drawNegativeEllipse(int x0, int y0, int x1, int y1)
-{
+void Canvas::drawNegativeEllipse(int x0, int y0, int x1, int y1) {
    int a = abs(x1 - x0), b = abs(y1 - y0), b1 = b&1; /* values of diameter */
    
    long dx = 4*(1-a)*b*b, dy = 4*(b1+1)*a*a; /* error increment */
@@ -965,7 +1002,7 @@ void Canvas::spray(int x, int y) {
     spray(x,y,current_color,50,1);
 }
 
-void Canvas::spray(int x, int y, int color, int radius, int intensity){
+void Canvas::spray(int x, int y, int color, int radius, int intensity) {
     
     int i = 0;
     int x_rand, y_rand;
@@ -1034,6 +1071,10 @@ void Canvas::drawCurrentColor(int x, int y) {
 
 void Canvas::setCurrentColor(int color) {
     current_color = color;
+}
+
+void Canvas::setCurrentWidth(int width) {
+    current_width = width;
 }
 
 int Canvas::getCurrentColor() {
@@ -1249,6 +1290,7 @@ void Canvas::copySelectionRectangle() {
         return;
 
     int temp;
+    // selectionRectangle.clear();
 
     if (selection_x_0 > selection_x_1)  // Swap points if p1 is on the right of p2
     {
@@ -1266,7 +1308,7 @@ void Canvas::copySelectionRectangle() {
 
     for (selection_x_0; selection_x_0 < selection_x_1; selection_x_0++) {
         std::vector<int> selectionRow;
-        for (int y = selection_y_0; y < selection_y_1; y++) {
+        for (selection_y_0; selection_y_0 < selection_y_1; selection_y_0++) {
             selectionRow.push_back(getPixel(selection_x_0, selection_y_0));
         }
         selectionRectangle.push_back(selectionRow);
@@ -1278,6 +1320,7 @@ void Canvas::cutSelectionRectangle() {
         return;
 
     int temp;
+    // selectionRectangle.clear();
 
     if (selection_x_0 > selection_x_1)  // Swap points if p1 is on the right of p2
     {
@@ -1293,11 +1336,15 @@ void Canvas::cutSelectionRectangle() {
         selection_y_1 = temp;
     }
 
-    for (selection_x_0; selection_x_0 < selection_x_1; selection_x_0++) {
+    for (int x_i = selection_x_0; x_i < selection_x_1; x_i++) {
+
         std::vector<int> selectionRow;
-        for (int y = selection_y_0; y < selection_y_1; y++) {
-            selectionRow.push_back(getPixel(selection_x_0, selection_y_0));
-            putPixel(selection_x_0, selection_y_0, background_color);
+
+        for (int y_i = selection_y_0; y_i < selection_y_1; y_i++) {
+
+            selectionRow.push_back(getPixel(x_i, y_i));
+            putPixel(x_i, y_i, background_color);
+
         }
         selectionRectangle.push_back(selectionRow);
     }
@@ -1307,10 +1354,17 @@ void Canvas::pasteSelectionRectangleFromVertex(int x, int y) {
     if (!rectangle_selected)
         return;
 
+    int put_x;
+    int put_y;
+
+    // TODO: test if pixel is within canvas
     for (int x_i = 0; x_i < selectionRectangle.size(); x_i++) {
         std::vector<int> selectionRow = selectionRectangle[x_i];
         for (int y_i = 0; y_i < selectionRow.size(); y_i++) {
-            putPixel(x + x_i, y + y_i, selectionRow[y_i]);
+            put_x = x + x_i;
+            put_y = y + y_i;
+            if (put_x > 0 && put_x < CANVAS_WIDTH && put_y > 0 && put_y < CANVAS_HEIGHT)
+                putPixel(put_x, put_y, selectionRow[y_i]);
         }
     }
 }
