@@ -13,6 +13,7 @@
 #include <sys/farptr.h>
 #include <cmath>
 
+#include "bitmap.h"
 #include "polygon.h"
 
 #define WINDOW_WIDTH 800
@@ -62,7 +63,9 @@ class Canvas {
         void drawWidthPalette(int x, int y);
         void drawCurrentColor(int x, int y);
         void setCurrentColor(int color);
-        
+        void Canvas::loadBMP(char *file, BITMAP *b, int x, int y);
+        void Canvas::drawBMP(BITMAP *b, int x, int y);
+
         void setCurrentWidth(int width);
         int getPickedWidth(int x, int y);
 
@@ -116,6 +119,7 @@ class Canvas {
 };
 
 Canvas::Canvas() {
+    VGA += __djgpp_conventional_base;
     curbank = 0;
     current_color = 15;
     current_width = 1;
@@ -146,8 +150,7 @@ int Canvas::getBackgroundColor() {
     return background_color;
 }
 
-void Canvas::putWidthPixel(int x, int y, int color, int width)
-{
+void Canvas::putWidthPixel(int x, int y, int color, int width) {
     int i, j;
 
     int midWidth = width >> 1;
@@ -1372,6 +1375,29 @@ void Canvas::pasteSelectionRectangleFromVertex(int x, int y) {
             if (put_x > 0 && put_x < CANVAS_WIDTH && put_y > 0 && put_y < CANVAS_HEIGHT)
                 putPixel(put_x, put_y, selectionRow[y_i]);
         }
+    }
+}
+
+void Canvas::loadBMP(char *file, BITMAP *b, int x, int y) {
+    load_bmp(file, b);
+    drawBMP(b, x, y);
+}
+
+void Canvas::drawBMP(BITMAP *b, int x, int y) {
+    int j;
+
+    word screen_offset = y * WINDOW_WIDTH + x;
+    // word screen_offset = (y << 8) + (y << 6) + x;
+    word bitmap_offset = 0;
+
+    // printf('%u - %u', screen_offset, bitmap_offset);
+
+    for (j = 0; j < b->height; j++)
+    {
+        memcpy(&VGA[screen_offset], &b->data[bitmap_offset], b->width);
+
+        bitmap_offset += b->width;
+        screen_offset += WINDOW_WIDTH;
     }
 }
 

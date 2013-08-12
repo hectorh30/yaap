@@ -2,7 +2,7 @@
 
     Once within the program, the following commands are available
 
-    * SHIFT + A: 
+    * SHIFT + A: Load BMP file
     * SHIFT + B: bucket fill
     * SHIFT + C: circle
     * SHIFT + D: select mode
@@ -14,7 +14,7 @@
     * SHIFT + J: 
     * SHIFT + K: 
     * SHIFT + L: line
-    * SHIFT + M: polygon (filled)
+    * SHIFT + M: draw polygon (filled)
     * SHIFT + N: new
     * SHIFT + O: draw polygon (not filled)
     * SHIFT + P: pencil
@@ -22,7 +22,7 @@
     * SHIFT + R: eraser
     * SHIFT + S: spray
     * SHIFT + T: text
-    * SHIFT + U: toggle polygon fill
+    * SHIFT + U:
     * SHIFT + V: paste
     * SHIFT + W: color picker
     * SHIFT + X: cut

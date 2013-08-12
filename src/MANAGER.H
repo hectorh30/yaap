@@ -25,7 +25,7 @@
 #define CMD_SPRAY 10
 #define CMD_NEW 11
 #define CMD_ERASER 12
-#define CMD_POLYGON_FILL 13
+#define CMD_POLYGON_FILLED 13
 #define CMD_POLYGON_MOVE 14
 #define CMD_POLYGON_PICK_HOUSE 15
 #define CMD_POLYGON_PICK_TREE 16
@@ -33,12 +33,12 @@
 #define CMD_POLYGON_SHEAR_X 18
 #define CMD_POLYGON_SHEAR_Y 19
 #define CMD_POLYGON_ROTATE 20
-#define CMD_POLYGON_TOGGLE_FILL 21
 #define CMD_COPY 22
 #define CMD_CUT 23
 #define CMD_PASTE 24
 #define CMD_SELECT 25
 #define CMD_MARKER 26
+#define CMD_LOAD_BMP 27
 
 class Manager {
     
@@ -49,11 +49,13 @@ class Manager {
         Canvas * canvas;
         Mouse * mouse;
         Polygon * polygon;
-        
+
         Polygon tree;
         Polygon house; 
         Polygon * selectedPolygon, * notSelectedPolygon;
-        
+
+        BITMAP bmp;
+
         int current_cmd;
         int vertex_x, vertex_y;
         bool isFirstMovement;
@@ -191,6 +193,18 @@ void Manager::executeCMD(int cmd) {
         case CMD_NONE:
             break;
 
+        case CMD_LOAD_BMP:
+
+            mouse->erasePointer();
+
+            BITMAP bmp;
+            canvas->loadBMP("res\\image.bmp", &bmp, mouse->getMainX()-1, mouse->getMainY()-1);
+
+            mouse->drawPointer();
+
+            current_cmd = CMD_NONE;
+            break;
+
         case CMD_SELECT:
             // If left click is hold
             if (mouse->getLeftHold()) {
@@ -210,7 +224,7 @@ void Manager::executeCMD(int cmd) {
                 } 
                 // If not, set an initial vertex
                 else {
-                    setVertex(mouse->getMainX()-1,mouse->getMainY()-1);
+                    setVertex(mouse->getMainX()-1, mouse->getMainY()-1);
                 }
             } else {
                 if (isVertexSet()) {
@@ -326,7 +340,6 @@ void Manager::executeCMD(int cmd) {
             break;
 
         case CMD_CIRCLE:
-            // TODO: remove weird circle at center of the circle
             if (mouse->getLeftHold()) {
                 if (isVertexSet()) {
                     if (mouse->isMoved()) {
@@ -408,7 +421,9 @@ void Manager::executeCMD(int cmd) {
                 if (isVertexSet()) {
                     
                     mouse->erasePointer();
+
                     canvas->floodFillScanline(mouse->getMainX()-1,mouse->getMainY()-1);
+
                     mouse->drawPointer();
                     
                     unsetVertex();
@@ -416,22 +431,96 @@ void Manager::executeCMD(int cmd) {
             }
             break;
 
-        case CMD_POLYGON_TOGGLE_FILL:
-            fill_polygon = !fill_polygon;
-            if (fill_polygon)
-                canvas->setCommandText("TEST: Fill polygon: true");
-            else 
-                canvas->setCommandText("TEST: Fill polygon: false");
-            current_cmd = CMD_NONE;
+        case CMD_POLYGON_FILLED:
+            if (mouse->getLeftHold()) { // Left click has precedence over right click
+                if (!is_left_down) { // Left click
+                    if (!isPolygonStarted) {
+
+                        setPolygonInitialPoint(mouse->getMainX() - 1, mouse->getMainY() - 1);
+
+                        setVertex(mouse->getMainX()-1,mouse->getMainY()-1);
+
+                        polygon = new Polygon();
+
+                        polygon->addPoint(mouse->getMainX() - 1, mouse->getMainY() - 1);
+
+                        isPolygonStarted = true;
+
+                    } else {
+
+                        // Remove last temp line
+                        canvas->drawNegativeLine(vertex_x,vertex_y,mouse->getOldX()-1,mouse->getOldY()-1);    
+
+                        // Draw polygon line
+                        canvas->drawLine(vertex_x,vertex_y,mouse->getMainX()-1,mouse->getMainY()-1);
+
+                        // Add polygon point
+                        polygon->addPoint(mouse->getMainX()-1,mouse->getMainY()-1);
+
+                        setVertex(mouse->getMainX()-1,mouse->getMainY()-1);
+                    }
+
+                    resetFirstMovement();
+
+                    is_left_down = true;
+                }
+            }  else if (mouse->getRightHold()) {
+                if (!is_right_down) { // Right click
+                    // Remove last temp line
+                    canvas->drawNegativeLine(vertex_x,vertex_y,mouse->getOldX()-1,mouse->getOldY()-1);
+                    
+                    // Draw final line
+                    canvas->drawLine(vertex_x,vertex_y,polygon_init_x,polygon_init_y);
+                    
+                    // Add polygon point
+                    polygon->addPoint(mouse->getMainX()-1, mouse->getMainY()-1);
+                    
+                    mouse->erasePointer();
+                    
+                    canvas->drawFilledPolygon(*polygon);
+                        
+                    mouse->drawPointer();
+                    
+                    // Reset stuff
+                    isPolygonStarted = false;
+                    resetFirstMovement();
+                    unsetVertex();
+                    is_right_down = true;   
+                }
+            } else {
+
+                if (is_left_down) { // Left release
+                    is_left_down = false;
+                } else if (is_right_down) { // Right release
+                    is_right_down = false;
+                } else { // Only moving
+
+                    if (isPolygonStarted) {
+
+                        if (mouse->isMoved()) {
+                            // If its not the first movement, you've got to delete the previous one
+                            if (!isFirstMovement) {
+                                canvas->drawNegativeLine(vertex_x,vertex_y,mouse->getOldX()-1,mouse->getOldY()-1);
+                            }
+
+                            canvas->drawNegativeLine(vertex_x,vertex_y,mouse->getMainX()-1,mouse->getMainY()-1);
+                        }
+
+                        isFirstMovement = false;
+                    }
+                }
+            }
             break;
 
         case CMD_POLYGON:
             if (mouse->getLeftHold()) { // Left click has precedence over right click
                 if (!is_left_down) { // Left click
                     if (!isPolygonStarted) {
+
                         setPolygonInitialPoint(mouse->getMainX()-1,mouse->getMainY()-1);
-                        setVertex(mouse->getMainX()-1,mouse->getMainY()-1);
-                        
+
+                        setVertex(mouse->getMainX()-1, mouse->getMainY()-1);
+
                         isPolygonStarted = true;
                         
                         polygon = new Polygon();
@@ -466,10 +555,7 @@ void Manager::executeCMD(int cmd) {
                     
                     mouse->erasePointer();
                     
-                    if (fill_polygon)
-                        canvas->drawFilledPolygon(*polygon);
-                    else 
-                        canvas->drawPolygon(*polygon);
+                    canvas->drawPolygon(*polygon);
                         
                     mouse->drawPointer();
                     
@@ -528,12 +614,6 @@ void Manager::executeCMD(int cmd) {
                 if (isVertexSet())
                     unsetVertex();
             }
-            break;
-
-        case CMD_POLYGON_FILL:
-            canvas->erasePolygon(*selectedPolygon);
-            canvas->drawFilledPolygon(*selectedPolygon);
-            current_cmd = CMD_NONE;
             break;
 
         case CMD_MARKER:
@@ -873,7 +953,7 @@ int Manager::getCMD() {
         if (flags == 2) {
             switch (cmd) {
                 case 'A':
-                    returnValue = CMD_POLYGON_MOVE;
+                    returnValue = CMD_LOAD_BMP;
                     break;
                 case 'B':
                     returnValue = CMD_BUCKET_FILL;
@@ -909,7 +989,7 @@ int Manager::getCMD() {
                     returnValue = CMD_LINE;
                     break;
                 case 'M':
-                    returnValue = CMD_POLYGON_FILL;
+                    returnValue = CMD_POLYGON_FILLED;
                     break;
                 case 'N':
                     returnValue = CMD_NEW;
@@ -931,9 +1011,6 @@ int Manager::getCMD() {
                     break;
                 case 'T':
                     returnValue = CMD_TEXT;
-                    break;
-                case 'U':
-                    returnValue = CMD_POLYGON_TOGGLE_FILL;
                     break;
                 case 'V':
                     returnValue = CMD_PASTE;
@@ -1124,8 +1201,8 @@ void Manager::updateCommandText(int cmd) {
         case CMD_ERASER:
             canvas->setCommandText("Eraser");
             break;
-        case CMD_POLYGON_FILL:
-            canvas->setCommandText("Fill polygon");
+        case CMD_POLYGON_FILLED:
+            canvas->setCommandText("Filled polygon");
             break;
         case CMD_RECTANGLE:
             canvas->setCommandText("Rectangle");
@@ -1162,6 +1239,9 @@ void Manager::updateCommandText(int cmd) {
             break;
         case CMD_SELECT:
             canvas->setCommandText("Select");
+            break;
+        case CMD_LOAD_BMP:
+            canvas->setCommandText("Load 'image.bmp'");
             break;
     }
 }
