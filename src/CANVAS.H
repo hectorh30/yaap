@@ -1290,7 +1290,9 @@ void Canvas::copySelectionRectangle() {
         return;
 
     int temp;
-    // selectionRectangle.clear();
+    
+    if (selectionRectangle.size() > 0)
+        selectionRectangle.clear();
 
     if (selection_x_0 > selection_x_1)  // Swap points if p1 is on the right of p2
     {
@@ -1306,10 +1308,10 @@ void Canvas::copySelectionRectangle() {
         selection_y_1 = temp;
     }
 
-    for (selection_x_0; selection_x_0 < selection_x_1; selection_x_0++) {
+    for (int x_i = selection_x_0; x_i < selection_x_1; x_i++) {
         std::vector<int> selectionRow;
-        for (selection_y_0; selection_y_0 < selection_y_1; selection_y_0++) {
-            selectionRow.push_back(getPixel(selection_x_0, selection_y_0));
+        for (int y_i = selection_y_0; y_i < selection_y_1; y_i++) {
+            selectionRow.push_back(getPixel(x_i, y_i));
         }
         selectionRectangle.push_back(selectionRow);
     }
@@ -1320,7 +1322,9 @@ void Canvas::cutSelectionRectangle() {
         return;
 
     int temp;
-    // selectionRectangle.clear();
+
+    if (selectionRectangle.size() > 0)
+        selectionRectangle.clear();
 
     if (selection_x_0 > selection_x_1)  // Swap points if p1 is on the right of p2
     {
@@ -1348,6 +1352,8 @@ void Canvas::cutSelectionRectangle() {
         }
         selectionRectangle.push_back(selectionRow);
     }
+
+    selection_rectangle_visible = false;
 }
 
 void Canvas::pasteSelectionRectangleFromVertex(int x, int y) {

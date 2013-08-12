@@ -199,7 +199,6 @@ void Manager::executeCMD(int cmd) {
                     if (mouse->isMoved()) {
                         // Redraw temp rectangle
                         if (isFirstMovement) {
-                            // if (canvas->rectangle_selected)
                             canvas->removeSelectionRectangle();
                         } else {
                             canvas->drawNegativeRectangle(vertex_x,vertex_y, mouse->getOldX() - 1,mouse->getOldY() - 1);
@@ -227,17 +226,42 @@ void Manager::executeCMD(int cmd) {
             break;
 
         case CMD_COPY:
-            canvas->copySelectionRectangle();
+            if (canvas->selection_rectangle_visible) {
+                mouse->erasePointer();
+
+                canvas->removeSelectionRectangle();
+                canvas->copySelectionRectangle();
+
+                mouse->drawPointer();
+            }
             break;
 
         case CMD_CUT:
-            canvas->cutSelectionRectangle();
+            if (canvas->selection_rectangle_visible) {
+                mouse->erasePointer();
+
+                canvas->removeSelectionRectangle();
+                canvas->cutSelectionRectangle();
+
+                mouse->drawPointer();
+            }
             break;
 
         case CMD_PASTE:
             if (mouse->getLeftHold()) {
-                canvas->pasteSelectionRectangleFromVertex(mouse->getMainX() - 1, mouse->getMainY() - 1);
-                canvas->removeSelectionRectangle();
+                if (!is_left_down) {
+                    // Left click
+                    is_left_down = true;
+                } else {
+                    if (is_left_down) {
+                        // Left release
+                        mouse->erasePointer();
+                        canvas->pasteSelectionRectangleFromVertex(mouse->getMainX() - 1, mouse->getMainY() - 1);
+                        mouse->drawPointer();
+
+                        is_left_down = false;
+                    }
+                }
             }
             break;
 
@@ -266,6 +290,7 @@ void Manager::executeCMD(int cmd) {
                     mouse->erasePointer();
                     canvas->drawCurrentColor(660,535);
                     mouse->drawPointer();
+
                     is_left_down = false;
                 }
             }
@@ -1226,7 +1251,7 @@ void Manager::executeOutOfCanvasCMD(int current_cmd)
 
 void Manager::preCMDChange(int current_cmd, int new_cmd) {
     if (current_cmd == CMD_SELECT) {
-        if (new_cmd != CMD_COPY && new_cmd != CMD_PASTE) {
+        if (new_cmd != CMD_COPY && new_cmd != CMD_CUT) {
             canvas->removeSelectionRectangle();
         }
     }
