@@ -63,8 +63,7 @@ class Manager {
         int polygon_init_x, polygon_init_y;
         // TODO: move this to the mouse class
         bool is_left_down, is_right_down;
-        std::ostringstream convert;
-
+        
         // Methods
         void initialize();
         void updateCommandText(int cmd);
@@ -252,6 +251,24 @@ void Manager::executeCMD(int cmd) {
             } else {
                 if (isVertexSet())
                     unsetVertex();
+            }
+            break;
+
+        case CMD_PICK_COLOR:
+            if (mouse->getLeftHold()) {
+                if (!is_left_down) {
+                    // Left click
+                    is_left_down = true;
+                }
+            } else {
+                if (is_left_down) { 
+                    // Left release
+                    canvas->setCurrentColor(canvas->getPixel(mouse->getMainX() - 1, mouse->getMainY() - 1));
+                    mouse->erasePointer();
+                    canvas->drawCurrentColor(660,535);
+                    mouse->drawPointer();
+                    is_left_down = false;
+                }
             }
             break;
 
@@ -472,24 +489,6 @@ void Manager::executeCMD(int cmd) {
 
             current_cmd = CMD_NONE;
             canvas->setCommandText("None");
-            break;
-
-        case CMD_PICK_COLOR:
-            if (mouse->getLeftHold()) {
-                if (!is_left_down) {
-                    // Left click
-                    is_left_down = true;
-                }
-            } else {
-                if (is_left_down) { 
-                    // Left release
-                    canvas->setCurrentColor(canvas->getPixel(mouse->getMainX() - 1, mouse->getMainY() - 1));
-                    mouse->erasePointer();
-                    canvas->drawCurrentColor(660,535);
-                    mouse->drawPointer();
-                    is_left_down = false;
-                }
-            }
             break;
 
         case CMD_ERASER:
@@ -840,127 +839,112 @@ int Manager::getCMD() {
 
     char cmd;
     int returnValue = current_cmd;
-    bool keyAvailable = isKeyAvailable();
 
+    bool keyAvailable = isKeyAvailable();
     if (keyAvailable)
     {
+        cmd = getKeyPressed();
         int flags = getKeyboardFlags();
-        if (flags == 2) {
-            convert << "in2";
-            canvas->setHelpText(convert.str().c_str());
 
-            cmd = getKeyPressed();
-            convert << cmd;
-            canvas->setHelpText(convert.str().c_str());
-            switch (cmd) {
-                case 'A':
-                    returnValue = CMD_POLYGON_MOVE;
-                    break;
-                case 'B':
-                    returnValue = CMD_BUCKET_FILL;
-                    break;
-                case 'C':
-                    returnValue = CMD_CIRCLE;
-                    break;
-                case 'D':
-                    returnValue = CMD_POLYGON_PICK_TREE;
-                    break;
-                case 'E':
-                    returnValue = CMD_ELLIPSE;
-                    break;
-                case 'F':
-                    returnValue = CMD_POLYGON_SCALE;
-                    break;
-                case 'G':
-                    returnValue = CMD_RECTANGLE;
-                    break;
-                case 'H':
-                    returnValue = CMD_POLYGON_PICK_HOUSE;
-                    break;
-                case 'I':
-                    returnValue = CMD_POLYGON_SHEAR_X;
-                    break;
-                case 'J':
-                    returnValue = CMD_POLYGON_SHEAR_Y;
-                    break;
-                case 'K':
-                    returnValue = CMD_POLYGON_ROTATE;
-                    break;
-                case 'L':
-                    returnValue = CMD_LINE;
-                    break;
-                case 'M':
-                    returnValue = CMD_POLYGON_FILL;
-                    break;
-                case 'N':
-                    returnValue = CMD_NEW;
-                    break;
-                case 'O':
-                    returnValue = CMD_POLYGON;
-                    break;
-                case 'P':
-                    returnValue = CMD_PENCIL;
-                    break;
-                case 'Q':
-                    returnValue = CMD_EXIT;
-                    break;
-                case 'R':
-                    returnValue = CMD_ERASER;
-                    break;
-                case 'S':
-                    returnValue = CMD_SPRAY;
-                    break;
-                case 'T':
-                    returnValue = CMD_TEXT;
-                    break;
-                case 'U':
-                    returnValue = CMD_POLYGON_TOGGLE_FILL;
-                    break;
-                case 'V':
-                    returnValue = CMD_MARKER;
-                    break;
-                case 'W':
-                    returnValue = CMD_PICK_COLOR;
-                    break;
-                default:
-                    break;
-            }
-        } else if (flags == 8) {
-            convert << "in8";
-            canvas->setHelpText(convert.str().c_str());
+        printf("%-25s",cmd);
 
-            cmd = getKeyPressed();
-            convert << cmd;
-            canvas->setHelpText(convert.str().c_str());
-            switch (cmd) {
-                case 'X':
-                    convert << "!";
-                    canvas->setHelpText(convert.str().c_str());
-                    returnValue = CMD_CUT;
-                    break;
-                case 'C':
-                    convert << "!";
-                    canvas->setHelpText(convert.str().c_str());
-                    returnValue = CMD_COPY;
-                    break;
-                case 'V':
-                    convert << "!";
-                    canvas->setHelpText(convert.str().c_str());
-                    returnValue = CMD_PASTE;
-                    break;
-                case 'Z':
-                    convert << "!";
-                    canvas->setHelpText(convert.str().c_str());
-                    returnValue = CMD_SELECT;
-                    break;
-                default:
-                    break;
-            }
-        } else {
-            convert << "ine";
-            canvas->setHelpText(convert.str().c_str());
-            getKeyPressed();
-        }
+        // if (flags == 2) {
+            // cmd = getKeyPressed();
+
+            // switch (cmd) {
+            //     case 'A':
+            //         returnValue = CMD_POLYGON_MOVE;
+            //         break;
+            //     case 'B':
+            //         returnValue = CMD_BUCKET_FILL;
+            //         break;
+            //     case 'C':
+            //         returnValue = CMD_CIRCLE;
+            //         break;
+            //     case 'D':
+            //         returnValue = CMD_POLYGON_PICK_TREE;
+            //         break;
+            //     case 'E':
+            //         returnValue = CMD_ELLIPSE;
+            //         break;
+            //     case 'F':
+            //         returnValue = CMD_POLYGON_SCALE;
+            //         break;
+            //     case 'G':
+            //         returnValue = CMD_RECTANGLE;
+            //         break;
+            //     case 'H':
+            //         returnValue = CMD_POLYGON_PICK_HOUSE;
+            //         break;
+            //     case 'I':
+            //         returnValue = CMD_POLYGON_SHEAR_X;
+            //         break;
+            //     case 'J':
+            //         returnValue = CMD_POLYGON_SHEAR_Y;
+            //         break;
+            //     case 'K':
+            //         returnValue = CMD_POLYGON_ROTATE;
+            //         break;
+            //     case 'L':
+            //         returnValue = CMD_LINE;
+            //         break;
+            //     case 'M':
+            //         returnValue = CMD_POLYGON_FILL;
+            //         break;
+            //     case 'N':
+            //         returnValue = CMD_NEW;
+            //         break;
+            //     case 'O':
+            //         returnValue = CMD_POLYGON;
+            //         break;
+            //     case 'P':
+            //         returnValue = CMD_PENCIL;
+            //         break;
+            //     case 'Q':
+            //         returnValue = CMD_EXIT;
+            //         break;
+            //     case 'R':
+            //         returnValue = CMD_ERASER;
+            //         break;
+            //     case 'S':
+            //         returnValue = CMD_SPRAY;
+            //         break;
+            //     case 'T':
+            //         returnValue = CMD_TEXT;
+            //         break;
+            //     case 'U':
+            //         returnValue = CMD_POLYGON_TOGGLE_FILL;
+            //         break;
+            //     case 'V':
+            //         returnValue = CMD_MARKER;
+            //         break;
+            //     case 'W':
+            //         returnValue = CMD_PICK_COLOR;
+            //         break;
+            //     default:
+            //         break;
+            // }
+
+        // } else if (flags == 8) {
+            
+
+        //     printf("%-25s",cmd);
+
+        //     switch (cmd) {
+        //         case 'A':
+        //             returnValue = CMD_PICK_COLOR;
+        //             break;
+        //         default:
+        //             returnValue = CMD_MARKER;
+        //             break;
+        //     }
+
+            // if (cmd == 'A') {
+            //     returnValue = CMD_PICK_COLOR;
+            // } else {
+            //     returnValue = CMD_MARKER;
+            // }
+        // }
     }
 
     return returnValue;
