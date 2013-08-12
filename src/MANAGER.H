@@ -63,7 +63,8 @@ class Manager {
         int polygon_init_x, polygon_init_y;
         // TODO: move this to the mouse class
         bool is_left_down, is_right_down;
-        
+        std::ostringstream convert;
+
         // Methods
         void initialize();
         void updateCommandText(int cmd);
@@ -142,9 +143,9 @@ void Manager::launch() {
     // Main loop
     int new_cmd;
 
-    int count = 0;
-    int show = 0;
-    std::ostringstream convert;
+    // int count = 0;
+    // int show = 0;
+    
 
     while (current_cmd != CMD_EXIT) 
     {
@@ -159,15 +160,16 @@ void Manager::launch() {
         // Mouse updating
         mouse->updateStatus();
 
-        count = count % 600;
-        if (count == 0)
-        {
-            show++;
-            show % 200;
-            convert << show;
-            canvas->setHelpText(convert.str().c_str());
-        }
-        count++;
+        // count = count % 600;
+        // if (count == 0)
+        // {
+        //     show++;
+        //     show % 200;
+        //     std::ostringstream convert;
+        //     convert << show;
+        //     canvas->setHelpText(convert.str().c_str());
+        // }
+        // count++;
 
         // Rendering
         if (mouse->isInsideCanvas()) {
@@ -227,7 +229,7 @@ void Manager::executeCMD(int cmd) {
             break;
 
         case CMD_COPY:
-            // canvas->copySelectionRectangle();
+            canvas->copySelectionRectangle();
             break;
 
         case CMD_CUT:
@@ -517,7 +519,7 @@ void Manager::executeCMD(int cmd) {
 
                 // TODO: remove hardcoded line width
                 if (isVertexSet())
-                    canvas->drawWidthLine(vertex_x, vertex_y, mouse->getMainX()-1, mouse->getMainY()-1, 25);
+                    canvas->drawWidthLine(vertex_x, vertex_y, mouse->getMainX() - 1, mouse->getMainY() - 1, 25);
 
                 setVertex(mouse->getMainX()-1,mouse->getMainY()-1);
             } else {
@@ -837,115 +839,127 @@ void Manager::unsetSVGA() {
 int Manager::getCMD() {
 
     char cmd;
-
     int returnValue = current_cmd;
-
     bool keyAvailable = isKeyAvailable();
+
     if (keyAvailable)
     {
         int flags = getKeyboardFlags();
-        switch(flags) {
-            case 2:                         // Only left shift key pressed
-                cmd = getKeyPressed();
+        if (flags == 2) {
+            convert << "in2";
+            canvas->setHelpText(convert.str().c_str());
 
-                switch(cmd) {
-                    case 'A':
-                        returnValue = CMD_POLYGON_MOVE;
-                        break;
-                    case 'B':
-                        returnValue = CMD_BUCKET_FILL;
-                        break;
-                    case 'C':
-                        returnValue = CMD_CIRCLE;
-                        break;
-                    case 'D':
-                        returnValue = CMD_POLYGON_PICK_TREE;
-                        break;
-                    case 'E':
-                        returnValue = CMD_ELLIPSE;
-                        break;
-                    case 'F':
-                        returnValue = CMD_POLYGON_SCALE;
-                        break;
-                    case 'G':
-                        returnValue = CMD_RECTANGLE;
-                        break;
-                    case 'H':
-                        returnValue = CMD_POLYGON_PICK_HOUSE;
-                        break;
-                    case 'I':
-                        returnValue = CMD_POLYGON_SHEAR_X;
-                        break;
-                    case 'J':
-                        returnValue = CMD_POLYGON_SHEAR_Y;
-                        break;
-                    case 'K':
-                        returnValue = CMD_POLYGON_ROTATE;
-                        break;
-                    case 'L':
-                        returnValue = CMD_LINE;
-                        break;
-                    case 'M':
-                        returnValue = CMD_POLYGON_FILL;
-                        break;
-                    case 'N':
-                        returnValue = CMD_NEW;
-                        break;
-                    case 'O':
-                        returnValue = CMD_POLYGON;
-                        break;
-                    case 'P':
-                        returnValue = CMD_PENCIL;
-                        break;
-                    case 'Q':
-                        returnValue = CMD_EXIT;
-                        break;
-                    case 'R':
-                        returnValue = CMD_ERASER;
-                        break;
-                    case 'S':
-                        returnValue = CMD_SPRAY;
-                        break;
-                    case 'T':
-                        returnValue = CMD_TEXT;
-                        break;
-                    case 'U':
-                        returnValue = CMD_POLYGON_TOGGLE_FILL;
-                        break;
-                    case 'V':
-                        returnValue = CMD_MARKER;
-                        break;
-                    case 'W':
-                        returnValue = CMD_PICK_COLOR;
-                        break;
-                    case 'Z':
-                        returnValue = CMD_SELECT;
-                        break;
-                    default:
-                        break;
-                }
-                break;
+            cmd = getKeyPressed();
+            convert << cmd;
+            canvas->setHelpText(convert.str().c_str());
+            switch (cmd) {
+                case 'A':
+                    returnValue = CMD_POLYGON_MOVE;
+                    break;
+                case 'B':
+                    returnValue = CMD_BUCKET_FILL;
+                    break;
+                case 'C':
+                    returnValue = CMD_CIRCLE;
+                    break;
+                case 'D':
+                    returnValue = CMD_POLYGON_PICK_TREE;
+                    break;
+                case 'E':
+                    returnValue = CMD_ELLIPSE;
+                    break;
+                case 'F':
+                    returnValue = CMD_POLYGON_SCALE;
+                    break;
+                case 'G':
+                    returnValue = CMD_RECTANGLE;
+                    break;
+                case 'H':
+                    returnValue = CMD_POLYGON_PICK_HOUSE;
+                    break;
+                case 'I':
+                    returnValue = CMD_POLYGON_SHEAR_X;
+                    break;
+                case 'J':
+                    returnValue = CMD_POLYGON_SHEAR_Y;
+                    break;
+                case 'K':
+                    returnValue = CMD_POLYGON_ROTATE;
+                    break;
+                case 'L':
+                    returnValue = CMD_LINE;
+                    break;
+                case 'M':
+                    returnValue = CMD_POLYGON_FILL;
+                    break;
+                case 'N':
+                    returnValue = CMD_NEW;
+                    break;
+                case 'O':
+                    returnValue = CMD_POLYGON;
+                    break;
+                case 'P':
+                    returnValue = CMD_PENCIL;
+                    break;
+                case 'Q':
+                    returnValue = CMD_EXIT;
+                    break;
+                case 'R':
+                    returnValue = CMD_ERASER;
+                    break;
+                case 'S':
+                    returnValue = CMD_SPRAY;
+                    break;
+                case 'T':
+                    returnValue = CMD_TEXT;
+                    break;
+                case 'U':
+                    returnValue = CMD_POLYGON_TOGGLE_FILL;
+                    break;
+                case 'V':
+                    returnValue = CMD_MARKER;
+                    break;
+                case 'W':
+                    returnValue = CMD_PICK_COLOR;
+                    break;
+                default:
+                    break;
+            }
+        } else if (flags == 8) {
+            convert << "in8";
+            canvas->setHelpText(convert.str().c_str());
 
-            case 8:                         // Only left alt key pressed
-                cmd = getKeyPressed();
-                switch (cmd) {
-                    case 'X':
-                        returnValue = CMD_CUT;
-                        break;
-                    case 'C':
-                        returnValue = CMD_COPY;
-                        break;
-                    case 'V':
-                        returnValue = CMD_PASTE;
-                        break;
-                    default:
-                        break;
-                }
-                break;
-
-            default:
-                getKeyPressed();
-                break;
+            cmd = getKeyPressed();
+            convert << cmd;
+            canvas->setHelpText(convert.str().c_str());
+            switch (cmd) {
+                case 'X':
+                    convert << "!";
+                    canvas->setHelpText(convert.str().c_str());
+                    returnValue = CMD_CUT;
+                    break;
+                case 'C':
+                    convert << "!";
+                    canvas->setHelpText(convert.str().c_str());
+                    returnValue = CMD_COPY;
+                    break;
+                case 'V':
+                    convert << "!";
+                    canvas->setHelpText(convert.str().c_str());
+                    returnValue = CMD_PASTE;
+                    break;
+                case 'Z':
+                    convert << "!";
+                    canvas->setHelpText(convert.str().c_str());
+                    returnValue = CMD_SELECT;
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            convert << "ine";
+            canvas->setHelpText(convert.str().c_str());
+            getKeyPressed();
         }
     }
 

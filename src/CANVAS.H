@@ -139,7 +139,7 @@ void Canvas::putWidthPixel(int x, int y, int color, int width)
 {
     int i, j;
 
-    int midWidth = width << 1;
+    int midWidth = width >> 1;
 
     putPixel(x, y, color);
     
@@ -148,6 +148,14 @@ void Canvas::putWidthPixel(int x, int y, int color, int width)
         for (j = y - midWidth; j < y + midWidth; j++)
             putPixel(i, j, color);
     }
+}
+
+void Canvas::drawWidthPalette(int x, int y) {
+
+    drawWidthLine(x, y, x, y+15, 10, 1);
+    drawWidthLine(x + 20, y + 2, x + 20, y + 13, 10, 4);
+    drawWidthLine(x + 40, y + 4, x + 40, y + 11, 10, 8);
+
 }
 
 void Canvas::putPixel(int x, int y) {
@@ -1002,17 +1010,6 @@ void Canvas::drawColorPalette(int x, int y) {
     drawLine(x-1, y, x-1, y+15);
     drawLine(x+16*8, y, x+16*8, y+15);
     
-}
-
-void Canvas::drawWidthPalette(int x, int y) {
-
-    int box_width = 20;
-    int box_separation = 10;
-
-    drawWidthLine(x, y, x, y+15, 10, 2);
-    drawWidthLine(x + 20, y, x + 20, y+15, 10, 6);
-    drawWidthLine(x + 40, y, x + 40, y+15, 10, 12);
-
 }
 
 void Canvas::drawCurrentColor(int x, int y) {
