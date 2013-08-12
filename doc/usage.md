@@ -23,9 +23,8 @@
     * SHIFT + S: spray
     * SHIFT + T: text
     * SHIFT + U: toggle polygon fill
-    * SHIFT + V
+    * SHIFT + V: marker
     * SHIFT + W: color picker
-    * SHIFT + X
     * SHIFT + Y
     * SHIFT + Z: select mode
 

@@ -38,6 +38,7 @@
 #define CMD_CUT 23
 #define CMD_PASTE 24
 #define CMD_SELECT 25
+#define CMD_MARKER 26
 
 class Manager {
     
@@ -72,6 +73,7 @@ class Manager {
         void unsetVertex();
         void resetFirstMovement();
         void preCMDChange(int current_cmd, int new_cmd);
+        void executeOutOfCanvasCMD(int current_cmd);
 
         //~ bool isPolygonStarted();
         void resetPolygonInitialPoint();
@@ -126,8 +128,9 @@ void Manager::initialize() {
     mouse->initialize();
 
     canvas->drawSeparatorLine();
-    canvas->drawPalette(660,510);
+    canvas->drawColorPalette(660,510);
     canvas->drawCurrentColor(660,535);
+    canvas->drawWidthPalette(560,510);
 
     updateCommandText(current_cmd);
 }
@@ -138,6 +141,11 @@ void Manager::launch() {
 
     // Main loop
     int new_cmd;
+
+    int count = 0;
+    int show = 0;
+    std::ostringstream convert;
+
     while (current_cmd != CMD_EXIT) 
     {
         // Keyboard updating
@@ -151,13 +159,21 @@ void Manager::launch() {
         // Mouse updating
         mouse->updateStatus();
 
+        count = count % 600;
+        if (count == 0)
+        {
+            show++;
+            show % 200;
+            convert << show;
+            canvas->setHelpText(convert.str().c_str());
+        }
+        count++;
+
         // Rendering
         if (mouse->isInsideCanvas()) {
             executeCMD(current_cmd);
         } else {
-            if (current_cmd == CMD_PICK_COLOR) {
-                executeCMD(current_cmd);
-            }
+            executeOutOfCanvasCMD(current_cmd);
         }
 
         // Resetting
@@ -182,7 +198,10 @@ void Manager::executeCMD(int cmd) {
                 if (isVertexSet()) {
                     if (mouse->isMoved()) {
                         // Redraw temp rectangle
-                        if (!isFirstMovement) {
+                        if (isFirstMovement) {
+                            // if (canvas->rectangle_selected)
+                            canvas->removeSelectionRectangle();
+                        } else {
                             canvas->drawNegativeRectangle(vertex_x,vertex_y, mouse->getOldX() - 1,mouse->getOldY() - 1);
                         }
 
@@ -208,7 +227,7 @@ void Manager::executeCMD(int cmd) {
             break;
 
         case CMD_COPY:
-            canvas->copySelectionRectangle();
+            // canvas->copySelectionRectangle();
             break;
 
         case CMD_CUT:
@@ -216,6 +235,10 @@ void Manager::executeCMD(int cmd) {
             break;
 
         case CMD_PASTE:
+            if (mouse->getLeftHold()) {
+                canvas->pasteSelectionRectangleFromVertex(mouse->getMainX() - 1, mouse->getMainY() - 1);
+                canvas->removeSelectionRectangle();
+            }
             break;
 
         case CMD_PENCIL:
@@ -223,7 +246,7 @@ void Manager::executeCMD(int cmd) {
                 if (isVertexSet())
                     canvas->drawLine(vertex_x,vertex_y,mouse->getMainX()-1,mouse->getMainY()-1);  
                     
-                setVertex(mouse->getMainX()-1,mouse->getMainY()-1);
+                setVertex(mouse->getMainX() - 1, mouse->getMainY() - 1);
             } else {
                 if (isVertexSet())
                     unsetVertex();
@@ -473,7 +496,7 @@ void Manager::executeCMD(int cmd) {
 
                 // TODO: remove hardcoded line width
                 if (isVertexSet())
-                    canvas->drawWidthLine(vertex_x,vertex_y,mouse->getMainX()-1,mouse->getMainY()-1,canvas->getBackgroundColor(),25);
+                    canvas->drawWidthLine(vertex_x, vertex_y, mouse->getMainX()-1, mouse->getMainY()-1, canvas->getBackgroundColor(), 25);
 
                 setVertex(mouse->getMainX()-1,mouse->getMainY()-1);
             } else {
@@ -486,6 +509,21 @@ void Manager::executeCMD(int cmd) {
             canvas->erasePolygon(*selectedPolygon);
             canvas->drawFilledPolygon(*selectedPolygon);
             current_cmd = CMD_NONE;
+            break;
+
+        case CMD_MARKER:
+            // TODO: check bug when painting diagonal lines
+            if (mouse->getLeftHold()) {
+
+                // TODO: remove hardcoded line width
+                if (isVertexSet())
+                    canvas->drawWidthLine(vertex_x, vertex_y, mouse->getMainX()-1, mouse->getMainY()-1, 25);
+
+                setVertex(mouse->getMainX()-1,mouse->getMainY()-1);
+            } else {
+                if (isVertexSet())
+                    unsetVertex();
+            }
             break;
 
         case CMD_RECTANGLE:
@@ -802,9 +840,11 @@ int Manager::getCMD() {
 
     int returnValue = current_cmd;
 
-    if (isKeyAvailable())
+    bool keyAvailable = isKeyAvailable();
+    if (keyAvailable)
     {
-        switch(getKeyboardFlags()) {
+        int flags = getKeyboardFlags();
+        switch(flags) {
             case 2:                         // Only left shift key pressed
                 cmd = getKeyPressed();
 
@@ -872,6 +912,9 @@ int Manager::getCMD() {
                     case 'U':
                         returnValue = CMD_POLYGON_TOGGLE_FILL;
                         break;
+                    case 'V':
+                        returnValue = CMD_MARKER;
+                        break;
                     case 'W':
                         returnValue = CMD_PICK_COLOR;
                         break;
@@ -879,7 +922,7 @@ int Manager::getCMD() {
                         returnValue = CMD_SELECT;
                         break;
                     default:
-                        getKeyPressed();
+                        break;
                 }
                 break;
 
@@ -896,12 +939,13 @@ int Manager::getCMD() {
                         returnValue = CMD_PASTE;
                         break;
                     default:
-                        getKeyPressed();
+                        break;
                 }
                 break;
 
             default:
                 getKeyPressed();
+                break;
         }
     }
 
@@ -1026,6 +1070,9 @@ void Manager::updateCommandText(int cmd) {
     switch(cmd){
         case CMD_EXIT:
             canvas->setCommandText("Exit");
+            break;
+        case CMD_MARKER:
+            canvas->setCommandText("Marker");
             break;
         case CMD_PENCIL:
             canvas->setCommandText("Pencil");
@@ -1158,6 +1205,16 @@ void Manager::setTextWritingMode(int init_x, int init_y) {
                 char_count = char_count+1;
             }
         }
+    }
+}
+
+void Manager::executeOutOfCanvasCMD(int current_cmd)
+{
+    if (current_cmd == CMD_PICK_COLOR || 
+        current_cmd == CMD_MARKER ||
+        current_cmd == CMD_PENCIL)
+    {
+        executeCMD(current_cmd);
     }
 }
 

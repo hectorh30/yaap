@@ -3,6 +3,7 @@
 
 #include <string>
 #include <iostream>
+#include <vector>
 #include <sstream>
 #include <conio.h>
 #include <bios.h>
@@ -25,14 +26,17 @@ class Canvas {
     public:
         //Fields
         int current_color;
+        int current_width;
         int background_color;
 
         // Selection data
-        bool area_selected;
+        bool selection_rectangle_visible;
+        bool rectangle_selected;
         int selection_x_0;
         int selection_x_1;
         int selection_y_0;
         int selection_y_1;
+        std::vector<std::vector<int> > selectionRectangle;
 
         // TODO: make this constants
         int CANVAS_HEIGHT;
@@ -44,13 +48,15 @@ class Canvas {
         void putChar(char character);
         void putChar(char character, int color);
         void setCommandText(const char *_text);
+        void setHelpText(const char *_text);
         void setMouseCoordinatesText(int x, int y);
         int getHeight();
         int getWidth();
         int getBackgroundColor();
         void drawSeparatorLine();
         void clear();
-        void drawPalette(int x, int y);
+        void drawColorPalette(int x, int y);
+        void drawWidthPalette(int x, int y);
         void drawCurrentColor(int x, int y);
         void setCurrentColor(int color);
         int getCurrentColor();
@@ -67,7 +73,8 @@ class Canvas {
 
         void drawLine(int x_0, int y_0, int x_1, int y_1, int color);
         void drawLine(int x_0, int y_0, int x_1, int y_1);
-        void drawWidthLine(int x_0, int y_0, int x_1, int y_1, int color,int width);
+        void drawWidthLine(int x_0, int y_0, int x_1, int y_1, int width);
+        void drawWidthLine(int x_0, int y_0, int x_1, int y_1, int color, int width);
 
         void drawRectangle(int x_0, int y_0, int x_1, int y_1);
         void drawRectangle(int x_0, int y_0, int x_1, int y_1, int color);
@@ -75,6 +82,9 @@ class Canvas {
 
         void setSelectionRectangle(int x_0, int y_0, int x_1, int y_1);
         void removeSelectionRectangle();
+        void copySelectionRectangle();
+        void cutSelectionRectangle();
+        void pasteSelectionRectangleFromVertex(int x, int y);
 
         void drawCircle(int cx, int cy, int radius);
         void drawCircle(int cx, int cy, int radius, int color);
@@ -100,13 +110,17 @@ class Canvas {
 Canvas::Canvas() {
     curbank = 0;
     current_color = 15;
+    current_width = 1;
     background_color = 0;
-    
+    selection_rectangle_visible = false;
+    rectangle_selected = false;
+    selection_x_0 = -1;
+    selection_x_1 = -1;
+    selection_y_0 = -1;
+    selection_y_1 = -1;
+
     CANVAS_HEIGHT = 500;
     CANVAS_WIDTH = 800;
-
-
-
 }
 
 int Canvas::getHeight() {
@@ -123,14 +137,16 @@ int Canvas::getBackgroundColor() {
 
 void Canvas::putWidthPixel(int x, int y, int color, int width)
 {
-    int i,j;
-    
+    int i, j;
+
+    int midWidth = width << 1;
+
     putPixel(x, y, color);
     
     // Paint a filled box instead of a single pixel
-    for (i = 1; i < width; i++){
-        for (j = 1; j < width; j++)
-            putPixel(x-j, y-i, color);
+    for (i = x - midWidth; i < x + midWidth; i++){
+        for (j = y - midWidth; j < y + midWidth; j++)
+            putPixel(i, j, color);
     }
 }
 
@@ -500,6 +516,10 @@ void Canvas::drawNegativeLine(int x_0, int y_0, int x_1, int y_1) {
     }
 }
 
+void Canvas::drawWidthLine(int x_0, int y_0, int x_1, int y_1, int width) {
+    drawWidthLine(x_0, y_0, x_1, y_1, current_color, width);
+}
+
 void Canvas::drawWidthLine(int x_0, int y_0, int x_1, int y_1, int color, int width) {
     /*
      * Same as drawLine() but uses putWidthPixel()
@@ -670,13 +690,11 @@ void Canvas::setTextCursor(int x, int y) {
     );
 }
 
-void Canvas::putChar(char character)
-{    
+void Canvas::putChar(char character) {
     putChar(character,current_color);
 }
 
-void Canvas::putChar(char character, int color)
-{    
+void Canvas::putChar(char character, int color) {
     // INT 10 - VIDEO - WRITE CHARACTER AND ATTRIBUTE AT CURSOR POSITION
     // http://www.delorie.com/djgpp/doc/rbinter/id/04/1.html
     __asm__ (
@@ -696,18 +714,21 @@ void Canvas::setCommandText(const char *text) {
 }
 
 void Canvas::setMouseCoordinatesText(int x, int y) {
-    setTextCursor(15,580); // Pass the x,y coordinates of the mouse to display
+    setTextCursor(700,580); // Pass the x,y coordinates of the mouse to display
     printf("%d,%d",x,y);
 }
 
-void Canvas::drawSeparatorLine() {
+void Canvas::setHelpText(const char *text) {
+    setTextCursor(15,580); // Pass the x,y pixel coordinates of the text pointer
+    printf("%-25s",text);
+}
 
+void Canvas::drawSeparatorLine() {
     drawLine(0, getHeight()+1, getWidth(), getHeight()+1, 92);
     drawLine(0, getHeight()+2, getWidth(), getHeight()+2, 92);
     drawLine(0, getHeight()+3, getWidth(), getHeight()+3, 92);
     drawLine(0, getHeight()+4, getWidth(), getHeight()+4, 92);
     drawLine(0, getHeight()+5, getWidth(), getHeight()+5, 92);
-
 }
 
 void Canvas::drawCircle(int cx, int cy, int radius) {
@@ -757,7 +778,8 @@ void Canvas::drawRectangle(int x_0, int y_0, int x_1, int y_1, int color) {
 }
 
 void Canvas::setSelectionRectangle(int x_0, int y_0, int x_1, int y_1) {
-    area_selected = true;
+    rectangle_selected = true;
+    selection_rectangle_visible = true;
     selection_x_0 = x_0;
     selection_x_1 = x_1;
     selection_y_0 = y_0;
@@ -766,14 +788,12 @@ void Canvas::setSelectionRectangle(int x_0, int y_0, int x_1, int y_1) {
 
 void Canvas::removeSelectionRectangle()
 {
-    if (area_selected) {
+    if (selection_rectangle_visible) {
         drawNegativeLine(selection_x_0, selection_y_0, selection_x_1, selection_y_0);
         drawNegativeLine(selection_x_0, selection_y_1, selection_x_1, selection_y_1);
         drawNegativeLine(selection_x_0, selection_y_0, selection_x_0, selection_y_1);
         drawNegativeLine(selection_x_1, selection_y_0, selection_x_1, selection_y_1);
-
-        area_selected = false;
-        setSelectionRectangle(-1, -1, -1, -1);
+        selection_rectangle_visible = false;
     }
 }
 
@@ -964,7 +984,7 @@ void Canvas::clear() {
             putPixel(x,y,background_color);
 }
 
-void Canvas::drawPalette(int x, int y) {
+void Canvas::drawColorPalette(int x, int y) {
     
     for (int i = 0; i < 16; i++){
         drawLine(x+i*8+0, y, x+i*8+0, y+15, i);
@@ -977,11 +997,22 @@ void Canvas::drawPalette(int x, int y) {
         drawLine(x+i*8+7, y, x+i*8+7, y+15, i);
     }
 
-    drawLine(x-1,y-1,x+16*8,y-1);
-    drawLine(x-1,y+16,x+16*8,y+16);
-    drawLine(x-1,y,x-1,y+15);
-    drawLine(x+16*8,y,x+16*8,y+15);
+    drawLine(x-1, y-1, x+16*8, y-1);
+    drawLine(x-1, y+16, x+16*8, y+16);
+    drawLine(x-1, y, x-1, y+15);
+    drawLine(x+16*8, y, x+16*8, y+15);
     
+}
+
+void Canvas::drawWidthPalette(int x, int y) {
+
+    int box_width = 20;
+    int box_separation = 10;
+
+    drawWidthLine(x, y, x, y+15, 10, 2);
+    drawWidthLine(x + 20, y, x + 20, y+15, 10, 6);
+    drawWidthLine(x + 40, y, x + 40, y+15, 10, 12);
+
 }
 
 void Canvas::drawCurrentColor(int x, int y) {
@@ -1213,6 +1244,77 @@ void Canvas::drawFilledPolygon(Polygon polygon, int color) {
             }
         }
         y++;
+    }
+}
+
+void Canvas::copySelectionRectangle() {
+    if (!rectangle_selected)
+        return;
+
+    int temp;
+
+    if (selection_x_0 > selection_x_1)  // Swap points if p1 is on the right of p2
+    {
+        temp = selection_x_0;
+        selection_x_0 = selection_x_1;
+        selection_x_1 = temp;
+    }
+
+    if (selection_y_0 > selection_y_1)
+    {
+        temp = selection_y_0;
+        selection_y_0 = selection_y_1;
+        selection_y_1 = temp;
+    }
+
+    for (selection_x_0; selection_x_0 < selection_x_1; selection_x_0++) {
+        std::vector<int> selectionRow;
+        for (int y = selection_y_0; y < selection_y_1; y++) {
+            selectionRow.push_back(getPixel(selection_x_0, selection_y_0));
+        }
+        selectionRectangle.push_back(selectionRow);
+    }
+}
+
+void Canvas::cutSelectionRectangle() {
+    if (!rectangle_selected)
+        return;
+
+    int temp;
+
+    if (selection_x_0 > selection_x_1)  // Swap points if p1 is on the right of p2
+    {
+        temp = selection_x_0;
+        selection_x_0 = selection_x_1;
+        selection_x_1 = temp;
+    }
+
+    if (selection_y_0 > selection_y_1)
+    {
+        temp = selection_y_0;
+        selection_y_0 = selection_y_1;
+        selection_y_1 = temp;
+    }
+
+    for (selection_x_0; selection_x_0 < selection_x_1; selection_x_0++) {
+        std::vector<int> selectionRow;
+        for (int y = selection_y_0; y < selection_y_1; y++) {
+            selectionRow.push_back(getPixel(selection_x_0, selection_y_0));
+            putPixel(selection_x_0, selection_y_0, background_color);
+        }
+        selectionRectangle.push_back(selectionRow);
+    }
+}
+
+void Canvas::pasteSelectionRectangleFromVertex(int x, int y) {
+    if (!rectangle_selected)
+        return;
+
+    for (int x_i = 0; x_i < selectionRectangle.size(); x_i++) {
+        std::vector<int> selectionRow = selectionRectangle[x_i];
+        for (int y_i = 0; y_i < selectionRow.size(); y_i++) {
+            putPixel(x + x_i, y + y_i, selectionRow[y_i]);
+        }
     }
 }
 
