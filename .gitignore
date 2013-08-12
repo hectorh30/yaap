@@ -2,3 +2,4 @@ DJGPP*
 .sublime-project
 *.swp
 *.exe
+*.EXE

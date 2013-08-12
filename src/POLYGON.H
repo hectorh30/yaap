@@ -35,9 +35,9 @@ class Polygon {
 };
 
 Polygon::Polygon() {
-    
+
     size = 0;
-    
+
     current_degrees = 0.0;
     //~ current_d_x = 0;
     //~ current_d_y = 0;

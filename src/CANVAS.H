@@ -1,6 +1,9 @@
 #ifndef CANVAS_H
 #define CANVAS_H
 
+#include <string>
+#include <iostream>
+#include <sstream>
 #include <conio.h>
 #include <bios.h>
 #include <dos.h>
@@ -18,17 +21,16 @@ class Canvas {
     private:
         int curbank;
         void setBank(unsigned long absoluteOffset);
-        
-        
+
     public:
         //Fields
         int current_color;
         int background_color;
-        
+
         // TODO: make this constants
         int CANVAS_HEIGHT;
         int CANVAS_WIDTH;
-        
+
         // Methods
         Canvas();
         void setTextCursor(int x, int y);
@@ -46,41 +48,42 @@ class Canvas {
         void setCurrentColor(int color);
         int getCurrentColor();
         void showHelp();
-            
+
         // Point plotting
         void putPixel(int x, int y, int color);
         void putPixel(int x, int y);
         int getPixel(int,int);
-        
+
         // Advanced plotting
         void putWidthPixel(int x, int y, int color, int width);
         void drawNegativeLine(int x_0, int y_0, int x_1, int y_1);
-        
+
         void drawLine(int x_0, int y_0, int x_1, int y_1, int color);
         void drawLine(int x_0, int y_0, int x_1, int y_1);
         void drawWidthLine(int x_0, int y_0, int x_1, int y_1, int color,int width);
-        
+
         void drawRectangle(int x_0, int y_0, int x_1, int y_1);
         void drawRectangle(int x_0, int y_0, int x_1, int y_1, int color);
         void drawNegativeRectangle(int x_0, int y_0, int x_1, int y_1);
-        
+        void drawSelectionRectangle(int x_0, int y_0, int x_1, int y_1);
+
         void drawCircle(int cx, int cy, int radius);
         void drawCircle(int cx, int cy, int radius, int color);
         void drawNegativeCircle(int cx, int cy, int radius);
-        
+
         void drawEllipse(int x0, int y0, int x1, int y1);
         void drawNegativeEllipse(int x0, int y0, int x1, int y1);
         void floodFillScanline(int x, int y, int newColor, int oldColor);
         void floodFillScanline(int x, int y);
-        
+
         void drawPolygon(Polygon polygon);
         void drawNegativePolygon(Polygon polygon);
         void drawPolygon(Polygon polygon, int color);
         void erasePolygon(Polygon polygon);
-        
+
         void drawFilledPolygon(Polygon polygon, int color);
         void drawFilledPolygon(Polygon polygon);
-        
+
         void spray(int x, int y, int color, int radius, int intensity);
         void spray(int x, int y);
 };
@@ -92,6 +95,9 @@ Canvas::Canvas() {
     
     CANVAS_HEIGHT = 500;
     CANVAS_WIDTH = 800;
+
+    
+
 }
 
 int Canvas::getHeight() {
@@ -129,15 +135,15 @@ void Canvas::putPixel(int x, int y, int color) {
     if(x >= WINDOW_WIDTH || x < 0 || y >= WINDOW_HEIGHT || y < 0) {
         return;
     }
-   
+
     unsigned char col = (unsigned char) color;
-   
+
     unsigned long absOff = (unsigned long) (y) * WINDOW_WIDTH + x;
-    
+
     setBank(absOff);
-    
-    _farpokeb(_dos_ds,0xA0000 + (absOff & 0xFFFF), color);
-    
+
+    _farpokeb(_dos_ds, 0xA0000 + (absOff & 0xFFFF), color);
+
 }
 
 int Canvas::getPixel(int x,int y) {
@@ -152,24 +158,26 @@ int Canvas::getPixel(int x,int y) {
 }
 
 void Canvas::setBank(unsigned long absoluteOffset) {
+
     int bank = (int)(absoluteOffset >> 16);
-    
+
     // if necesary, change bank
-    if(bank != curbank)
+    if (bank != curbank)
     {
         union REGS regs;
-       
+
         regs.x.ax = 0x4F05;
         regs.x.bx = 0;
         regs.x.dx = bank;
         int86(0x10,&regs,&regs);
-        
+
         /*
         regs.x.ax = 0x4F05;
         regs.x.bx = 1;
         regs.x.dx = bank;
         int86(0x_10,&regs,&regs);
         */
+
         curbank = bank;
     }
 }
@@ -183,7 +191,7 @@ void Canvas::drawLine(int x_0, int y_0, int x_1, int y_1, int color) {
      * Based on lineBresenham(int x_0, int y_0, int x_1, int y_1)
      * source: http://www.codekeep.net/snippets/e39b2d9e-0843-4405-8e31-44e212ca1c45.aspx
      */
-    
+
     int F, x, y, temp;
 
     if (x_0 > x_1)  // Swap points if p1 is on the right of p2
@@ -684,11 +692,13 @@ void Canvas::setMouseCoordinatesText(int x, int y) {
 }
 
 void Canvas::drawSeparatorLine() {
-    drawLine(0,getHeight()+1,getWidth(),getHeight()+1,92);
-    drawLine(0,getHeight()+2,getWidth(),getHeight()+2,92);
-    drawLine(0,getHeight()+3,getWidth(),getHeight()+3,92);
-    drawLine(0,getHeight()+4,getWidth(),getHeight()+4,92);
-    drawLine(0,getHeight()+5,getWidth(),getHeight()+5,92);
+
+    drawLine(0, getHeight()+1, getWidth(), getHeight()+1, 92);
+    drawLine(0, getHeight()+2, getWidth(), getHeight()+2, 92);
+    drawLine(0, getHeight()+3, getWidth(), getHeight()+3, 92);
+    drawLine(0, getHeight()+4, getWidth(), getHeight()+4, 92);
+    drawLine(0, getHeight()+5, getWidth(), getHeight()+5, 92);
+
 }
 
 void Canvas::drawCircle(int cx, int cy, int radius) {
@@ -735,6 +745,15 @@ void Canvas::drawRectangle(int x_0, int y_0, int x_1, int y_1, int color) {
     drawLine(x_0,y_1,x_1,y_1,color);
     drawLine(x_0,y_0,x_0,y_1,color);
     drawLine(x_1,y_0,x_1,y_1,color);
+}
+
+void Canvas::drawSelectionRectangle(int x_0, int y_0, int x_1, int y_1) {
+    drawNegativeLine(x_0,y_0,x_1,y_0);
+    drawNegativeLine(x_0,y_1,x_1,y_1);
+    drawNegativeLine(x_0,y_0,x_0,y_1);
+    drawNegativeLine(x_1,y_0,x_1,y_1);
+
+
 }
 
 void Canvas::drawNegativeRectangle(int x_0, int y_0, int x_1, int y_1) {

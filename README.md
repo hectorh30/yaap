@@ -22,10 +22,9 @@ add the path to DJCPP to the [dosbox.conf](http://www.dosbox.com/wiki/Dosbox.con
 
 ## Compile
     From within [DOSBox](http://www.dosbox.com/) run
-    ```
+
     cd SRC
-    `gpp -o src/main.exe main.cpp`
-    ```
+    gpp -o main.exe src\main.cpp
 
 ## Run
     main.exe

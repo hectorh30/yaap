@@ -1,6 +1,9 @@
 #ifndef MANAGER_H
 #define MANAGER_H
 
+#include <string>
+#include <iostream>
+#include <sstream>
 #include <dpmi.h>
 
 #include "canvas.h"
@@ -31,6 +34,10 @@
 #define CMD_POLYGON_SHEAR_Y 19
 #define CMD_POLYGON_ROTATE 20
 #define CMD_POLYGON_TOGGLE_FILL 21
+#define CMD_COPY 22
+#define CMD_CUT 23
+#define CMD_PASTE 24
+#define CMD_SELECT 25
 
 class Manager {
     
@@ -67,7 +74,7 @@ class Manager {
         //~ bool isPolygonStarted();
         void resetPolygonInitialPoint();
         void setPolygonInitialPoint(int x, int y);
-        
+
     public:
         // Fields
         
@@ -76,7 +83,7 @@ class Manager {
         void setSVGA();
         void unsetSVGA();
         bool isKeyAvailable();
-        bool isShiftPressed();
+        int getKeyboardFlags();
         int getCMD();
         char getKeyPressed();
         int processKey(int echo);
@@ -85,105 +92,131 @@ class Manager {
 };
 
 Manager::Manager() {
-    
+
     current_cmd = CMD_NONE;
+
     vertex_x = -1;
     vertex_y = -1;
+
     fill_polygon = false;
     temp_int = -1;
-    
+
     polygon_init_x = polygon_init_y = -1;
+
     is_left_down = is_right_down = false;
+
     isPolygonStarted = false;
+
     polygon = new Polygon();
-    
+
     isFirstMovement = true;
-    
+
     canvas = new Canvas();
+
     mouse = new Mouse(canvas);
-    
+
 }
 
 void Manager::initialize() {
-    
+
     setSVGA();
-    
+
     mouse->initialize();
+
     canvas->drawSeparatorLine();
     canvas->drawPalette(660,510);
     canvas->drawCurrentColor(660,535);
+
     updateCommandText(current_cmd);
-    
-    // Drawing shapes for second project
-    tree.addPoint(200,200);
-    tree.addPoint(200,230);
-    tree.addPoint(220,230);
-    tree.addPoint(220,200);
-    tree.addPoint(240,200);
-    tree.addPoint(210,130);
-    tree.addPoint(180,200);
-    
-    house.addPoint(400,400);
-    house.addPoint(400,450);
-    house.addPoint(500,450);
-    house.addPoint(500,400);
-    house.addPoint(520,400);
-    house.addPoint(450,348);
-    house.addPoint(380,400);
-    
-    //~ transformer = &tree;
-    canvas->drawPolygon(tree);
-    canvas->drawPolygon(house);
 }
 
-void Manager::launch()
-{   
+void Manager::launch() {
+
     initialize();
-    
+
     // Main loop
     int new_cmd;
     while (current_cmd != CMD_EXIT) 
     {
         // Keyboard updating
         new_cmd = getCMD();
-        if (current_cmd != new_cmd)
-        {
+
+        if (current_cmd != new_cmd) {
             // Update command text
             updateCommandText(new_cmd);
             current_cmd = new_cmd;
         }
-            
+
         // Mouse updating
         mouse->updateStatus();
-        
+
         // Rendering
         if (mouse->isInsideCanvas()) {
             executeAction(current_cmd);
         } else {
-            if (current_cmd == CMD_PICK_COLOR)
-            {
+            if (current_cmd == CMD_PICK_COLOR) {
                 executeAction(current_cmd);
             }
         }
-        
+
         // Resetting
         mouse->resetStatus();
-        canvas->setMouseCoordinatesText(mouse->getMainX(),mouse->getMainY());        
+        canvas->setMouseCoordinatesText(mouse->getMainX(),mouse->getMainY());
     }
-    
+
     updateCommandText(current_cmd);
     unsetSVGA();
 }
 
 void Manager::executeAction(int cmd) {
-    
-    // TODO: validate if mouse goes away from canvas 
+
     switch(cmd) {
+        case CMD_SELECT:
+            // If left click is hold
+            if (mouse->getLeftHold()) {
+                // If theres already a vertex set
+                if (isVertexSet()) {
+                    if (mouse->isMoved()) {
+                        // Redraw temp rectangle
+                        if (!isFirstMovement) {
+                            canvas->drawNegativeRectangle(vertex_x,vertex_y, mouse->getOldX() - 1,mouse->getOldY() - 1);
+                        }
+
+                        canvas->drawNegativeRectangle(vertex_x,vertex_y, mouse->getMainX() - 1,mouse->getMainY() - 1);
+                        isFirstMovement = false;
+                    }
+                } 
+                // If not, set an initial vertex
+                else {
+                    setVertex(mouse->getMainX()-1,mouse->getMainY()-1);
+                }
+            } else {
+                if (isVertexSet()) {
+                    // Last temp rectangle is the selection rectangle
+                    canvas->drawNegativeRectangle(vertex_x, vertex_y, mouse->getOldX()-1, mouse->getOldY()-1);
+
+                    // Reset stuff as action is finished
+                    unsetVertex();
+                    resetFirstMovement();
+                }
+            }
+            break;
+
         case CMD_NONE:
             break;
+
+        case CMD_COPY:
+
+            break;
+
+        case CMD_CUT:
+            break;
+
+        case CMD_PASTE:
+            break;
+
         case CMD_PENCIL:
-            if (mouse->getLeftHold())
-            {
+            if (mouse->getLeftHold()) {
                 if (isVertexSet())
                     canvas->drawLine(vertex_x,vertex_y,mouse->getMainX()-1,mouse->getMainY()-1);  
                     
@@ -193,9 +226,9 @@ void Manager::executeAction(int cmd) {
                     unsetVertex();
             }
             break;
+
         case CMD_LINE:
-            if (mouse->getLeftHold())
-            {
+            if (mouse->getLeftHold()) {
                 if (isVertexSet()) {
                     if (mouse->isMoved()) {
                         // Redraw temp line
@@ -222,10 +255,10 @@ void Manager::executeAction(int cmd) {
                 }
             }
             break;
+
         case CMD_CIRCLE:
             // TODO: remove weird circle at center of the circle
-            if (mouse->getLeftHold())
-            {
+            if (mouse->getLeftHold()) {
                 if (isVertexSet()) {
                     if (mouse->isMoved()) {
                         // Remove previous temp circle
@@ -268,10 +301,10 @@ void Manager::executeAction(int cmd) {
                 }
             }
             break;
+
         case CMD_ELLIPSE:
-            if (mouse->getLeftHold())
-            {
-                if (isVertexSet()) {       
+            if (mouse->getLeftHold()) {
+                if (isVertexSet()) {
                     if (mouse->isMoved()) {
                         // Redraw temp ellipse
                         if (!isFirstMovement)
@@ -297,10 +330,10 @@ void Manager::executeAction(int cmd) {
                 }
             }
             break;
+
         case CMD_BUCKET_FILL:
             // TODO: fix bucket fill!!
-            if (mouse->getLeftHold())
-            {
+            if (mouse->getLeftHold()) {
                 setVertex(mouse->getMainX()-1,mouse->getMainY()-1);
             } else {
                 if (isVertexSet()) {
@@ -313,14 +346,16 @@ void Manager::executeAction(int cmd) {
                 }
             }
             break;
+
         case CMD_POLYGON_TOGGLE_FILL:
             fill_polygon = !fill_polygon;
             if (fill_polygon)
-                canvas->setCommandText("Fill polygon: true");
+                canvas->setCommandText("TEST: Fill polygon: true");
             else 
-                canvas->setCommandText("Fill polygon: false");
+                canvas->setCommandText("TEST: Fill polygon: false");
             current_cmd = CMD_NONE;
             break;
+
         case CMD_POLYGON:
             if (mouse->getLeftHold()) { // Left click has precedence over right click
                 if (!is_left_down) { // Left click
@@ -395,19 +430,22 @@ void Manager::executeAction(int cmd) {
                 }
             }
             break;
+
         case CMD_SPRAY:
             if (mouse->getLeftHold())
                 canvas->spray(mouse->getMainX() - 1, mouse->getMainY() - 1);
             break;
+
         case CMD_NEW:
             
             mouse->erasePointer();
             canvas->clear();
             mouse->drawPointer();
-            
+
             current_cmd = CMD_NONE;
             canvas->setCommandText("None");
             break;
+
         case CMD_PICK_COLOR:
             if (mouse->getLeftHold()) {
                 if (!is_left_down) {
@@ -425,29 +463,33 @@ void Manager::executeAction(int cmd) {
                 }
             }
             break;
+
         case CMD_ERASER:
             // TODO: check bug when painting diagonal lines
-            if (mouse->getLeftHold())
-            {
+            if (mouse->getLeftHold()) {
+
                 // TODO: remove hardcoded line width
                 if (isVertexSet())
                     canvas->drawWidthLine(vertex_x,vertex_y,mouse->getMainX()-1,mouse->getMainY()-1,canvas->getBackgroundColor(),25);
-                
+
                 setVertex(mouse->getMainX()-1,mouse->getMainY()-1);
             } else {
                 if (isVertexSet())
                     unsetVertex();
             }
             break;
+
         case CMD_POLYGON_FILL:
             canvas->erasePolygon(*selectedPolygon);
-            canvas->drawFilledPolygon(*selectedPolygon);            
+            canvas->drawFilledPolygon(*selectedPolygon);
             current_cmd = CMD_NONE;
             break;
+
         case CMD_RECTANGLE:
-            if (mouse->getLeftHold())
-            {
-                if (isVertexSet()) {       
+            // If left click is hold
+            if (mouse->getLeftHold()) {
+                // If theres already a vertex set
+                if (isVertexSet()) {
                     if (mouse->isMoved()) {
                         // Redraw temp rectangle
                         if (!isFirstMovement) {
@@ -457,7 +499,9 @@ void Manager::executeAction(int cmd) {
                         canvas->drawNegativeRectangle(vertex_x,vertex_y, mouse->getMainX() - 1,mouse->getMainY() - 1);
                         isFirstMovement = false;
                     }
-                } else {
+                } 
+                // If not, set an initial vertex
+                else {
                     setVertex(mouse->getMainX()-1,mouse->getMainY()-1);
                 }
             } else {
@@ -474,6 +518,7 @@ void Manager::executeAction(int cmd) {
                 }
             }
             break;
+
         case CMD_TEXT:
             if (mouse->getLeftHold()) {
                 if (!is_left_down) {
@@ -481,7 +526,7 @@ void Manager::executeAction(int cmd) {
                     is_left_down = true;
                 }
             } else {
-                if (is_left_down) { 
+                if (is_left_down) {
                     // Left release
                     mouse->erasePointer();
                     setTextWritingMode(mouse->getMainX() - 1, mouse->getMainY() - 1);
@@ -491,6 +536,7 @@ void Manager::executeAction(int cmd) {
                 }
             }
             break;
+
         case CMD_POLYGON_MOVE:
             if (mouse->getLeftHold())
             {
@@ -533,6 +579,7 @@ void Manager::executeAction(int cmd) {
                 }
             }
             break;
+
         case CMD_POLYGON_SCALE:
             if (mouse->getLeftHold())
             {
@@ -575,9 +622,9 @@ void Manager::executeAction(int cmd) {
                 }
             }
             break;
+
         case CMD_POLYGON_SHEAR_X:
-            if (mouse->getLeftHold())
-            {
+            if (mouse->getLeftHold()) {
                 if (isVertexSet()) {
                     if (mouse->isMoved()) {
                         // Redraw temp polygon
@@ -617,9 +664,9 @@ void Manager::executeAction(int cmd) {
                 }
             }
             break;
+
         case CMD_POLYGON_SHEAR_Y:
-            if (mouse->getLeftHold())
-            {
+            if (mouse->getLeftHold()) {
                 if (isVertexSet()) {
                     if (mouse->isMoved()) {
                         // Redraw temp polygon
@@ -659,9 +706,9 @@ void Manager::executeAction(int cmd) {
                 }
             }
             break;
+
         case CMD_POLYGON_ROTATE:
-            if (mouse->getLeftHold())
-            {
+            if (mouse->getLeftHold()) {
                 if (isVertexSet()) {
                     if (mouse->isMoved()) {
                         // Redraw temp polygon
@@ -708,26 +755,30 @@ void Manager::executeAction(int cmd) {
                 }
             }
             break;
+
         case CMD_POLYGON_PICK_HOUSE:
-            
+
             selectedPolygon = &house;
             notSelectedPolygon = &tree;
-            
-            canvas->setCommandText("House picked");
+
             current_cmd = CMD_NONE;
             break;
+
         case CMD_POLYGON_PICK_TREE:
-            
+
             selectedPolygon = &tree;
             notSelectedPolygon = &house;
-            
-            canvas->setCommandText("Tree picked");
             current_cmd = CMD_NONE;
             break;
     }
 }
 
 void Manager::setSVGA() {
+    /**
+     * Int 10/AX=4F02h: Set video mode VESA SVGA 800x600x256
+     * 
+     * http://www.ctyme.com/intr/rb-0275.htm
+     */
     __asm__ (
         "movl $0x4F02, %eax\n\t"
         "movl $0x103, %ebx\n\t"
@@ -743,95 +794,124 @@ void Manager::unsetSVGA() {
 }
 
 int Manager::getCMD() {
-    
+
     char cmd;
-    
+
+    int returnValue = current_cmd;
+
     if (isKeyAvailable())
     {
-        if (isShiftPressed())
-        {
-            cmd = getKeyPressed();
-            int returnValue;
-            
-            switch(cmd){
-                case 'A':
-                    returnValue = CMD_POLYGON_MOVE;
-                    break;
-                case 'B':
-                    returnValue = CMD_BUCKET_FILL;
-                    break;
-                case 'C':
-                    returnValue = CMD_CIRCLE;
-                    break;
-                case 'D':
-                    returnValue = CMD_POLYGON_PICK_TREE;
-                    break;
-                case 'E':
-                    returnValue = CMD_ELLIPSE;
-                    break;
-                case 'F':
-                    returnValue = CMD_POLYGON_SCALE;
-                    break;
-                case 'G':
-                    returnValue = CMD_RECTANGLE;
-                    break;
-                case 'H':
-                    returnValue = CMD_POLYGON_PICK_HOUSE;
-                    break;
-                case 'I':
-                    returnValue = CMD_POLYGON_SHEAR_X;
-                    break;
-                case 'J':
-                    returnValue = CMD_POLYGON_SHEAR_Y;
-                    break;
-                case 'K':
-                    returnValue = CMD_POLYGON_ROTATE;
-                    break;
-                case 'L':
-                    returnValue = CMD_LINE;
-                    break;
-                case 'M':
-                    returnValue = CMD_POLYGON_FILL;
-                    break;
-                case 'N':
-                    returnValue = CMD_NEW;
-                    break;
-                case 'O':
-                    returnValue = CMD_POLYGON;
-                    break;
-                case 'P':
-                    returnValue = CMD_PENCIL;
-                    break;
-                case 'Q':
-                    returnValue = CMD_EXIT;
-                    break;
-                case 'R':
-                    returnValue = CMD_ERASER;
-                    break;
-                case 'S':
-                    returnValue = CMD_SPRAY;
-                    break;
-                case 'T':
-                    returnValue = CMD_TEXT;
-                    break;
-                case 'U':
-                    returnValue = CMD_POLYGON_TOGGLE_FILL;
-                    break;
-                case 'W':
-                    returnValue = CMD_PICK_COLOR;
-                    break;
-                
-            }
-            return returnValue;
-        } else {
-            getKeyPressed();
+        switch(getKeyboardFlags()) {
+            case 2:                         // Only left shift key pressed
+                cmd = getKeyPressed();
+
+                switch(cmd) {
+                    case 'A':
+                        returnValue = CMD_POLYGON_MOVE;
+                        break;
+                    case 'B':
+                        returnValue = CMD_BUCKET_FILL;
+                        break;
+                    case 'C':
+                        returnValue = CMD_CIRCLE;
+                        break;
+                    case 'D':
+                        returnValue = CMD_POLYGON_PICK_TREE;
+                        break;
+                    case 'E':
+                        returnValue = CMD_ELLIPSE;
+                        break;
+                    case 'F':
+                        returnValue = CMD_POLYGON_SCALE;
+                        break;
+                    case 'G':
+                        returnValue = CMD_RECTANGLE;
+                        break;
+                    case 'H':
+                        returnValue = CMD_POLYGON_PICK_HOUSE;
+                        break;
+                    case 'I':
+                        returnValue = CMD_POLYGON_SHEAR_X;
+                        break;
+                    case 'J':
+                        returnValue = CMD_POLYGON_SHEAR_Y;
+                        break;
+                    case 'K':
+                        returnValue = CMD_POLYGON_ROTATE;
+                        break;
+                    case 'L':
+                        returnValue = CMD_LINE;
+                        break;
+                    case 'M':
+                        returnValue = CMD_POLYGON_FILL;
+                        break;
+                    case 'N':
+                        returnValue = CMD_NEW;
+                        break;
+                    case 'O':
+                        returnValue = CMD_POLYGON;
+                        break;
+                    case 'P':
+                        returnValue = CMD_PENCIL;
+                        break;
+                    case 'Q':
+                        returnValue = CMD_EXIT;
+                        break;
+                    case 'R':
+                        returnValue = CMD_ERASER;
+                        break;
+                    case 'S':
+                        returnValue = CMD_SPRAY;
+                        break;
+                    case 'T':
+                        returnValue = CMD_TEXT;
+                        break;
+                    case 'U':
+                        returnValue = CMD_POLYGON_TOGGLE_FILL;
+                        break;
+                    case 'W':
+                        returnValue = CMD_PICK_COLOR;
+                        break;
+                    case 'W':
+                        returnValue = CMD_SELECT;
+                        break;
+                    default:
+                        getKeyPressed();
+                }
+                break;
+
+            case 8:                         // Only left alt key pressed
+                cmd = getKeyPressed();
+                switch (cmd) {
+                    case 'X':
+                        returnValue = CMD_CUT;
+                        break;
+                    case 'C':
+                        returnValue = CMD_COPY;
+                        break;
+                    case 'V':
+                        returnValue = CMD_PASTE;
+                        break;
+                    default:
+                        getKeyPressed();
+                }
+                break;
+
+            default:
+                getKeyPressed();
         }
     }
-    
-    return current_cmd;
+
+    return returnValue;
 }
 
 char Manager::getKeyPressed() {
+    /**
+     * Int 16/AH=00h: KEYBOARD - GET KEYSTROKE
+     * 
+     * http://www.ctyme.com/intr/rb-1754.htm
+     */
+
     char key;
     
     __asm__ __volatile__ (
@@ -847,7 +927,12 @@ char Manager::getKeyPressed() {
 }
 
 bool Manager::isKeyAvailable() {
-    
+    /**
+     * Int 16/AH=01h: KEYBOARD - CHECK FOR KEYSTROKE
+     * 
+     * http://www.ctyme.com/intr/rb-1755.htm
+     */
+
     int keystrokeAvailable = 0;
     
     __asm__ __volatile__ (
@@ -872,9 +957,14 @@ bool Manager::isKeyAvailable() {
     }
 }
 
-bool Manager::isShiftPressed() {
-    
-    int isShiftPressed = 0;
+int Manager::getKeyboardFlags() {
+    /**
+     * Int 16/AH=02h: KEYBOARD - GET SHIFT FLAGS
+     * 
+     * http://www.ctyme.com/intr/rb-1756.htm
+     */
+
+    int keyboardFlags = 0;
     
     __asm__ __volatile__ (
         // Test if key available
@@ -882,17 +972,28 @@ bool Manager::isShiftPressed() {
         "movb $0x2, %%ah    \n\t" // set AH = 2H
         "int $0x16          \n\t" // Int 16H: AL = shift flags (see #00582)
         "xorb %%ah,%%ah     \n\t" // set AH = 0
-        : "=a" (isShiftPressed)
+        : "=a" (keyboardFlags)
         :
         :
     );
+
     
-    if (isShiftPressed == 1 || isShiftPressed == 2)
-    {
-        return true;
-    } else {
-        return false;
-    }
+    // std::ostringstream convert;
+
+    // convert << keyboardFlags;
+
+    // std::string str = convert.str().c_str();
+
+    // canvas->setCommandText(convert.str().c_str());
+
+    // if (keyboardFlags == 1 || keyboardFlags == 2 || keyboardFlags == 4)
+    // {
+    //     return true;
+    // } else {
+    //     return false;
+    // }
+
+    return keyboardFlags;
 }
 
 int Manager::processKey(int echo) {
@@ -980,6 +1081,12 @@ void Manager::updateCommandText(int cmd) {
         case CMD_POLYGON_ROTATE:
             canvas->setCommandText("Polygon rotate");
             break;
+        case CMD_CUT:
+            canvas->setCommandText("Cut");
+            break;
+        case CMD_SELECT:
+            canvas->setCommandText("Select");
+            break;
     }
 }
 
@@ -1022,7 +1129,7 @@ void Manager::setTextWritingMode(int init_x, int init_y) {
         {
             current_char = getKeyPressed();
             
-            if (isShiftPressed())
+            if (getKeyboardFlags() == 1)
             {
                 exitTextWritingMode = true;
                 

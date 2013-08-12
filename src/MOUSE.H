@@ -161,14 +161,14 @@ void Mouse::updateStatus() {
 }
 
 void Mouse::resetStatus() {
-    
+
     if (isMoved())
     {
         drawPointer();
         old_x = main_x;
         old_y = main_y;
     }
-    
+
     unsetButtons();
 }
 
@@ -183,7 +183,7 @@ void Mouse::erasePointer() {
     canvas->drawNegativeLine(old_x, old_y, old_x+11, old_y+11);
 }
 
-void Mouse::drawPointer() {    
+void Mouse::drawPointer() {
     // Draw new mouse pointer
     canvas->drawNegativeLine(main_x, main_y, main_x, main_y+15);
     canvas->drawNegativeLine(main_x, main_y+15, main_x+11, main_y+11);
